@@ -1,0 +1,21 @@
+[build]
+  command = "npm run build"
+  publish = ".output/public"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# O frontend chama sempre /api/public/pix/*, tanto no preview do Lovable
+# quanto na Netlify. Na Netlify essas chamadas vão para as Functions.
+[[redirects]]
+  from = "/api/public/pix/create"
+  to = "/.netlify/functions/pix-create"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/public/pix/status"
+  to = "/.netlify/functions/pix-status"
+  status = 200
+  force = true
