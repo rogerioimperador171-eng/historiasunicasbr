@@ -1,24 +1,40 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
+import landingHtml from "../site/landing.html?raw";
+
+const title = "Histórias Únicas - Ajude o Kauê";
+const description =
+  "Kauê, 14 anos, tem AME tipo 2 e depende de um aparelho alugado para respirar com segurança. Ajude a campanha da família com uma doação via Pix.";
+
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title },
+      { name: "description", content: description },
+      { property: "og:title", content: title },
+      { property: "og:description", content: description },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+    links: [
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@400;500;600;700&display=swap",
+      },
+      { rel: "stylesheet", href: "/css/site.css" },
+    ],
+    scripts: [
+      { src: "/js/fb-tracking.js", "data-pixel-id": "1421857436428378", defer: true },
+      { src: "/js/latest.js", async: true, defer: true },
+      { src: "/js/embed.js", defer: true },
+      { src: "/js/site.js", defer: true },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
-  return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
-  );
+  return <div dangerouslySetInnerHTML={{ __html: landingHtml }} />;
 }
