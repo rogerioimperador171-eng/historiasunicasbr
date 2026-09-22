@@ -214,7 +214,7 @@
         }).then(function () {
           if (window.VSL_CONFIG) {
             window.VSL_CONFIG.containerId = item.node.id;
-            window.VSL_CONFIG.streamUrl = '/api/public/video/kaue.m3u8';
+            window.VSL_CONFIG.streamUrl = '/api/public/video/kaue_720p.m3u8';
             if (window.VSL_CONFIG.assetVersion) {
               assetVersion = resolveAssetVersion(window.VSL_CONFIG.assetVersion);
             }
