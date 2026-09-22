@@ -28,7 +28,7 @@ export const Route = createFileRoute("/")({
     scripts: [
       { src: "/js/fb-tracking.js", "data-pixel-id": "1421857436428378", defer: true },
       { src: "/js/latest.js", async: true, defer: true },
-      { src: "https://kksapps.com.br/videos/public/embed.js?v=1", defer: true },
+      { src: "/js/embed.js?v=2", defer: true },
       { src: "/js/site.js", defer: true },
     ],
   }),
