@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PagamentoRouteImport } from './routes/pagamento'
 import { Route as ApiPublicPixCreateRouteImport } from './routes/api/public/pix/create'
 import { Route as ApiPublicPixStatusRouteImport } from './routes/api/public/pix/status'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PagamentoRoute = PagamentoRouteImport.update({
+  id: '/pagamento',
+  path: '/pagamento',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicPixCreateRoute = ApiPublicPixCreateRouteImport.update({
@@ -31,30 +37,40 @@ const ApiPublicPixStatusRoute = ApiPublicPixStatusRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/pagamento': typeof PagamentoRoute
   '/api/public/pix/create': typeof ApiPublicPixCreateRoute
   '/api/public/pix/status': typeof ApiPublicPixStatusRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/pagamento': typeof PagamentoRoute
   '/api/public/pix/create': typeof ApiPublicPixCreateRoute
   '/api/public/pix/status': typeof ApiPublicPixStatusRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/pagamento': typeof PagamentoRoute
   '/api/public/pix/create': typeof ApiPublicPixCreateRoute
   '/api/public/pix/status': typeof ApiPublicPixStatusRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/public/pix/create' | '/api/public/pix/status'
+  fullPaths:
+    '/' | '/pagamento' | '/api/public/pix/create' | '/api/public/pix/status'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/public/pix/create' | '/api/public/pix/status'
-  id: '__root__' | '/' | '/api/public/pix/create' | '/api/public/pix/status'
+  to: '/' | '/pagamento' | '/api/public/pix/create' | '/api/public/pix/status'
+  id:
+    | '__root__'
+    | '/'
+    | '/pagamento'
+    | '/api/public/pix/create'
+    | '/api/public/pix/status'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  PagamentoRoute: typeof PagamentoRoute
   ApiPublicPixCreateRoute: typeof ApiPublicPixCreateRoute
   ApiPublicPixStatusRoute: typeof ApiPublicPixStatusRoute
 }
@@ -66,6 +82,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pagamento': {
+      id: '/pagamento'
+      path: '/pagamento'
+      fullPath: '/pagamento'
+      preLoaderRoute: typeof PagamentoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/pix/create': {
@@ -87,6 +110,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  PagamentoRoute: PagamentoRoute,
   ApiPublicPixCreateRoute: ApiPublicPixCreateRoute,
   ApiPublicPixStatusRoute: ApiPublicPixStatusRoute,
 }
