@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as PagamentoRouteImport } from './routes/pagamento'
 import { Route as ApiPublicPixCreateRouteImport } from './routes/api/public/pix/create'
 import { Route as ApiPublicPixStatusRouteImport } from './routes/api/public/pix/status'
+import { Route as ApiPublicVideoSplatRouteImport } from './routes/api/public/video/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,18 +35,25 @@ const ApiPublicPixStatusRoute = ApiPublicPixStatusRouteImport.update({
   path: '/api/public/pix/status',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicVideoSplatRoute = ApiPublicVideoSplatRouteImport.update({
+  id: '/api/public/video/$',
+  path: '/api/public/video/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/pagamento': typeof PagamentoRoute
   '/api/public/pix/create': typeof ApiPublicPixCreateRoute
   '/api/public/pix/status': typeof ApiPublicPixStatusRoute
+  '/api/public/video/$': typeof ApiPublicVideoSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/pagamento': typeof PagamentoRoute
   '/api/public/pix/create': typeof ApiPublicPixCreateRoute
   '/api/public/pix/status': typeof ApiPublicPixStatusRoute
+  '/api/public/video/$': typeof ApiPublicVideoSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,19 +61,30 @@ export interface FileRoutesById {
   '/pagamento': typeof PagamentoRoute
   '/api/public/pix/create': typeof ApiPublicPixCreateRoute
   '/api/public/pix/status': typeof ApiPublicPixStatusRoute
+  '/api/public/video/$': typeof ApiPublicVideoSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/pagamento' | '/api/public/pix/create' | '/api/public/pix/status'
+    | '/'
+    | '/pagamento'
+    | '/api/public/pix/create'
+    | '/api/public/pix/status'
+    | '/api/public/video/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/pagamento' | '/api/public/pix/create' | '/api/public/pix/status'
+  to:
+    | '/'
+    | '/pagamento'
+    | '/api/public/pix/create'
+    | '/api/public/pix/status'
+    | '/api/public/video/$'
   id:
     | '__root__'
     | '/'
     | '/pagamento'
     | '/api/public/pix/create'
     | '/api/public/pix/status'
+    | '/api/public/video/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -73,6 +92,7 @@ export interface RootRouteChildren {
   PagamentoRoute: typeof PagamentoRoute
   ApiPublicPixCreateRoute: typeof ApiPublicPixCreateRoute
   ApiPublicPixStatusRoute: typeof ApiPublicPixStatusRoute
+  ApiPublicVideoSplatRoute: typeof ApiPublicVideoSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -105,6 +125,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicPixStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/video/$': {
+      id: '/api/public/video/$'
+      path: '/api/public/video/$'
+      fullPath: '/api/public/video/$'
+      preLoaderRoute: typeof ApiPublicVideoSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -113,6 +140,7 @@ const rootRouteChildren: RootRouteChildren = {
   PagamentoRoute: PagamentoRoute,
   ApiPublicPixCreateRoute: ApiPublicPixCreateRoute,
   ApiPublicPixStatusRoute: ApiPublicPixStatusRoute,
+  ApiPublicVideoSplatRoute: ApiPublicVideoSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
