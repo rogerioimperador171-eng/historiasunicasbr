@@ -27,7 +27,7 @@ export const Route = createFileRoute("/pagamento")({
       { rel: "stylesheet", href: "/css/pagamento.css" },
     ],
   }),
-  component: PagamentoPage;
+  component: PagamentoPage,
 });
 
 type Donation = { amount: number; nome: string };

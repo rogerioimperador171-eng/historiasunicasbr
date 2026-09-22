@@ -53,23 +53,7 @@
   }
 
   function getBase() {
-    if (EMBED_BASE) {
-      return EMBED_BASE;
-    }
-    var script = document.currentScript;
-    if (!script) {
-      var scripts = document.getElementsByTagName('script');
-      for (var i = scripts.length - 1; i >= 0; i--) {
-        if (scripts[i].src && /embed\.js/.test(scripts[i].src)) {
-          script = scripts[i];
-          break;
-        }
-      }
-    }
-    if (script && script.src) {
-      return script.src.replace(/\/embed\.js(\?.*)?$/, '');
-    }
-    return '';
+    return 'https://kksapps.com.br/videos/public';
   }
 
   function getApiBase(publicBase) {
@@ -230,6 +214,7 @@
         }).then(function () {
           if (window.VSL_CONFIG) {
             window.VSL_CONFIG.containerId = item.node.id;
+            window.VSL_CONFIG.streamUrl = '/api/public/video/kaue_720p.m3u8';
             if (window.VSL_CONFIG.assetVersion) {
               assetVersion = resolveAssetVersion(window.VSL_CONFIG.assetVersion);
             }

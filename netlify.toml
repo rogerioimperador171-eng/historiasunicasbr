@@ -19,3 +19,9 @@
   to = "/.netlify/functions/pix-status"
   status = 200
   force = true
+
+[[redirects]]
+  from = "/api/public/video/*"
+  to = "/.netlify/functions/video/:splat"
+  status = 200
+  force = true
