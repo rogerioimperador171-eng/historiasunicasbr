@@ -40,7 +40,7 @@ de código precisa ser alterado.
 ## Publicar na Netlify
 
 1. Conecte o repositório em **Add new site → Import an existing project**.
-2. Build command: `npm run build` · Publish directory: `.output/public` ·
+2. Build command: `npm run build` · Publish directory: `dist/client` ·
    Functions directory: `netlify/functions` (já definidos em `netlify.toml`).
 3. Cadastre as variáveis de ambiente acima e faça o deploy.
 

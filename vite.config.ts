@@ -11,5 +11,13 @@ export default defineConfig({
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
+    // Gera HTML estático das páginas públicas. Assim a Netlify pode publicar
+    // dist/client direto e as chamadas /api/public/* ficam nas Netlify Functions.
+    prerender: {
+      enabled: true,
+      autoStaticPathsDiscovery: false,
+      filter: ({ path }: { path: string }) => path === "/" || path === "/pagamento",
+    },
+    pages: [{ path: "/", prerender: { enabled: true } }, { path: "/pagamento", prerender: { enabled: true } }],
   },
 });
