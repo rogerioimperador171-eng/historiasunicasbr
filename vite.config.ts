@@ -6,17 +6,18 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
-// Na Netlify (variável NETLIFY=true definida automaticamente no build) usamos o
-// preset "netlify" do nitro: ele gera os arquivos estáticos + a função de SSR
-// que responde as rotas /api/public/*. Dentro do Lovable o preset é
-// controlado pela plataforma e esta opção é ignorada.
-const isNetlify = Boolean(process.env["NETLIFY"]);
-
 export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
+    // Gera HTML estático das páginas públicas. Assim a Netlify pode publicar
+    // dist/client direto e as chamadas /api/public/* ficam nas Netlify Functions.
+    prerender: {
+      enabled: true,
+      autoStaticPathsDiscovery: false,
+      filter: ({ path }: { path: string }) => path === "/" || path === "/pagamento",
+    },
+    pages: [{ path: "/", prerender: { enabled: true } }, { path: "/pagamento", prerender: { enabled: true } }],
   },
-  ...(isNetlify ? { nitro: { preset: "netlify" } } : {}),
 });
