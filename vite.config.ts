@@ -9,7 +9,12 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 export default defineConfig({
   // Fixa o destino do build: sem isso a Netlify detecta o ambiente e move o
   // servidor para .netlify/, quebrando a pré-renderização das páginas.
-  nitro: { preset: "cloudflare-module" },
+  // O output também é fixado para que os arquivos estáticos caiam em
+  // dist/client, que é o diretório publicado pela Netlify (netlify.toml).
+  nitro: {
+    preset: "cloudflare-module",
+    output: { dir: "dist", serverDir: "dist/server", publicDir: "dist/client" },
+  },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
