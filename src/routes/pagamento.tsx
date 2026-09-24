@@ -323,22 +323,6 @@ function PagamentoPage() {
               <div className="pg-secure-timer">⏱ 24h</div>
             </div>
 
-            <div className="pg-receiver">
-              <div className="pg-receiver-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <rect x="4" y="3" width="16" height="18" rx="2" />
-                  <path d="M8 11h8" />
-                </svg>
-              </div>
-              <div>
-                <strong>PROPIXBR LTDA</strong>
-                <p>
-                  BASS PAGO INSTITUICAO DE PAGAMENTO LTDA
-                  <br />
-                  CNPJ: 65.474.453/0001-03
-                </p>
-              </div>
-            </div>
           </>
         )}
       </div>
