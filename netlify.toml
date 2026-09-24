@@ -6,6 +6,8 @@
 [build.environment]
   NODE_VERSION = "22.12.0"
   NPM_FLAGS = "--legacy-peer-deps"
+  NITRO_PRESET = "cloudflare-module"
+  SERVER_PRESET = "cloudflare-module"
 
 
 [functions]
