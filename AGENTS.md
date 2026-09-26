@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Netlify publishes only `netlify-dist`; the build script copies the generated static client there to avoid preset-dependent output paths.
