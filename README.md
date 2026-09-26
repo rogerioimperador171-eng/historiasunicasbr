@@ -15,6 +15,7 @@ Landing page da campanha + pagamento Pix integrado à API **ProPixBR**
 - `netlify/functions/pix-create.mts` — gera o Pix (`POST /api/v1/deposit`)
 - `netlify/functions/pix-status.mts` — consulta o pagamento (`POST /api/v1/check`)
 - `netlify.toml` — build, diretório de functions e redirects de `/api/public/pix/*`
+- `scripts/prepare-netlify-output.mjs` — prepara `netlify-dist` a partir da saída gerada pelo build
 
 ## Variáveis de ambiente
 
@@ -40,7 +41,7 @@ de código precisa ser alterado.
 ## Publicar na Netlify
 
 1. Conecte o repositório em **Add new site → Import an existing project**.
-2. Build command: `npm run build` · Publish directory: `dist/client` ·
+2. Build command: `npm run build` · Publish directory: `netlify-dist` ·
    Functions directory: `netlify/functions` (já definidos em `netlify.toml`).
 3. Cadastre as variáveis de ambiente acima e faça o deploy.
 
