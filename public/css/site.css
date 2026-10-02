@@ -476,6 +476,8 @@
     .step-back:hover { color: var(--blue); }
     .modal-footer { padding: .75rem 1.2rem 1.4rem; border-top: 1px solid var(--border); flex-shrink: 0; }
     .modal-safe { display: flex; align-items: center; justify-content: center; gap: 5px; font-size: .72rem; color: var(--text-muted); margin-top: 7px; }
+    #donationError { color: var(--danger); justify-content: flex-start; }
+    #donationError[hidden] { display: none; }
     .modal-loading { display: none; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; gap: 1rem; text-align: center; }
     .spinner { width: 44px; height: 44px; border: 3px solid var(--blue-light); border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }

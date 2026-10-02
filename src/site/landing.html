@@ -498,12 +498,14 @@
       <div class="modal-body">
         <div class="amount-chip"><span class="chip-label">Doando</span><span class="chip-value" id="chipUnica">R$ 0,00</span></div>
         <div class="form-group">
-          <label>Nome</label>
-          <input type="text" class="form-input" id="nameUnica" placeholder="Seu nome completo">
-          <div class="anon-row"><input type="checkbox" id="anonCheck" onchange="toggleAnon()"><span onclick="document.getElementById('anonCheck').click()">Quero doar anonimamente</span></div>
+          <label for="nameUnica">Nome completo</label>
+          <input type="text" class="form-input" id="nameUnica" placeholder="Seu nome completo" autocomplete="name" maxlength="120" required>
         </div>
-        <div class="form-group"><label>WhatsApp (opcional)</label><input type="tel" class="form-input" id="phoneUnica" placeholder="(00) 00000-0000" maxlength="15"></div>
-        <div class="form-group"><label>E-mail (opcional)</label><input type="email" class="form-input" id="emailUnica" placeholder="seu@email.com" autocomplete="email"></div>
+        <div class="form-group"><label for="phoneUnica">Telefone com DDD</label><input type="tel" class="form-input" id="phoneUnica" placeholder="(00) 00000-0000" maxlength="15" autocomplete="tel-national" required></div>
+        <div class="form-group"><label for="emailUnica">E-mail</label><input type="email" class="form-input" id="emailUnica" placeholder="seu@email.com" autocomplete="email" maxlength="254" required></div>
+        <div class="form-group"><label for="documentUnica">CPF ou CNPJ</label><input type="text" class="form-input" id="documentUnica" placeholder="Somente números" inputmode="numeric" maxlength="18" required></div>
+        <p class="modal-safe">Dados obrigatórios para processar o pagamento pela FlevoPay. Sua identidade não aparece publicamente na campanha.</p>
+        <p id="donationError" role="alert" class="modal-safe" hidden></p>
         <div class="turbine-card" id="turbineCard" onclick="toggleTurbine(event)">
           <input type="checkbox" id="turbineCheck">
           <div class="turbine-text"><strong><svg width="12" height="12" viewBox="0 0 24 24" fill="var(--gold)"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>Turbinar minha doação</strong><p>Adicionar R$ 4,99 para cobrir taxas e garantir que 100% chegue ao beneficiário.</p></div>

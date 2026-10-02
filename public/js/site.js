@@ -252,44 +252,59 @@ function clearValBtns() {
   selectedAmount = null;
   document.querySelectorAll('.val-btn').forEach(function(b) { b.classList.remove('selected'); });
 }
-function toggleAnon() {
-  var cb = document.getElementById('anonCheck'); var inp = document.getElementById('nameUnica');
-  inp.value = cb.checked ? 'Anônimo' : ''; inp.disabled = cb.checked;
-}
 function toggleTurbine(e) {
   var cb = document.getElementById('turbineCheck'); var card = document.getElementById('turbineCard');
   if (e.target !== cb) cb.checked = !cb.checked;
   card.classList.toggle('checked', cb.checked);
 }
-function submitDonation() {
+var donationSubmitting = false;
+async function submitDonation() {
+  if (donationSubmitting) return;
+  var errorElement = document.getElementById('donationError');
+  function showDonationError(message) {
+    errorElement.textContent = message;
+    errorElement.hidden = false;
+  }
+  errorElement.hidden = true;
   var amt = selectedAmount;
-  if (!amt || amt < 5) { alert('O valor mínimo da doação é R$ 5,00.'); return; }
+  if (!amt || amt < 5) { showDonationError('O valor mínimo da doação é R$ 5,00.'); return; }
   var nome = document.getElementById('nameUnica').value.trim();
   var tel = document.getElementById('phoneUnica').value.replace(/\D/g, '');
   var email = document.getElementById('emailUnica').value.trim();
-  if (!nome) { alert('Preencha seu nome ou marque "Anônimo".'); return; }
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    alert('Digite um e-mail válido ou deixe o campo em branco.');
+  var payerDocument = document.getElementById('documentUnica').value.replace(/\D/g, '');
+  if (nome.length < 3 || nome.split(/\s+/).length < 2) { showDonationError('Preencha seu nome completo.'); return; }
+  if (!/^\d{10,11}$/.test(tel)) { showDonationError('Informe um telefone válido com DDD.'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showDonationError('Digite um e-mail válido.');
     return;
   }
+  if (!/^(?:\d{11}|\d{14})$/.test(payerDocument)) { showDonationError('Informe um CPF com 11 dígitos ou CNPJ com 14 dígitos.'); return; }
   amt += document.getElementById('turbineCheck').checked ? 4.99 : 0;
   amt = Math.round(amt * 100) / 100;
+  if (amt > 7000) { showDonationError('O valor máximo da doação, incluindo taxas, é R$ 7.000,00.'); return; }
 
+  donationSubmitting = true;
   document.querySelectorAll('.modal-step').forEach(function(s) { s.classList.remove('active'); });
   document.getElementById('modalLoading').style.display = 'flex';
 
   try {
-    sessionStorage.setItem('hu_donation', JSON.stringify({
-      amount: amt, nome: nome, telefone: tel, email: email, ts: Date.now()
-    }));
-  } catch (e) {}
-
-  var utm = [];
-  new URLSearchParams(window.location.search).forEach(function(v, k) {
-    if (k.indexOf('utm_') === 0) utm.push(k + '=' + encodeURIComponent(v));
-  });
-  var url = '/pagamento?amount=' + amt + '&nome=' + encodeURIComponent(nome) + (utm.length ? '&' + utm.join('&') : '');
-  setTimeout(function() { window.location.href = url; }, 400);
+    var response = await fetch('/api/public/pix/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: amt, payerName: nome, payerEmail: email, payerPhone: tel, payerDocument: payerDocument })
+    });
+    var payment = await response.json();
+    if (!response.ok) throw new Error(payment.error || 'Não foi possível gerar o Pix. Tente novamente.');
+    var paymentParams = new URLSearchParams({ transactionId: payment.transactionId });
+    new URLSearchParams(window.location.search).forEach(function(value, key) {
+      if (key.indexOf('utm_') === 0) paymentParams.set(key, value);
+    });
+    window.location.href = '/pagamento?' + paymentParams.toString();
+  } catch (error) {
+    showStep('step2Unica');
+    showDonationError(error instanceof Error ? error.message : 'Sem conexão. Tente novamente.');
+    donationSubmitting = false;
+  }
 }
 function resetModal() {
   selectedAmount = null; donationType = 'unica';
@@ -298,7 +313,8 @@ function resetModal() {
   document.getElementById('nameUnica').value = ''; document.getElementById('nameUnica').disabled = false;
   document.getElementById('phoneUnica').value = '';
   document.getElementById('emailUnica').value = '';
-  document.getElementById('anonCheck').checked = false;
+  document.getElementById('documentUnica').value = '';
+  document.getElementById('donationError').hidden = true;
   document.getElementById('turbineCheck').checked = false;
   document.getElementById('turbineCard').classList.remove('checked');
 }

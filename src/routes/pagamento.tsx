@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { CreatePixResponse } from "@/lib/propix";
+import type { CreatePixResponse, PixStatusResponse } from "@/lib/pix";
 
 const title = "Finalize sua doação via Pix | Histórias Únicas";
 const description =
@@ -30,33 +30,18 @@ export const Route = createFileRoute("/pagamento")({
   component: PagamentoPage,
 });
 
-type Donation = { amount: number; nome: string };
+type Donation = { amount: number };
 
 function formatBRL(value: number) {
   return `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function readDonation(): Donation | null {
-  if (typeof window === "undefined") return null;
-  const params = new URLSearchParams(window.location.search);
-  let amount = Number(params.get("amount"));
-  let nome = params.get("nome") ?? "";
-
-  if (!amount || amount < 5) {
-    try {
-      const stored = window.sessionStorage.getItem("hu_donation");
-      if (stored) {
-        const parsed = JSON.parse(stored) as { amount?: number; nome?: string };
-        if (parsed.amount) amount = Number(parsed.amount);
-        if (!nome && parsed.nome) nome = parsed.nome;
-      }
-    } catch {
-      /* ignora */
-    }
-  }
-
-  if (!amount || amount < 5) return null;
-  return { amount: Math.round(amount * 100) / 100, nome: nome.trim() || "Doador Anonimo" };
+function paymentError(status: string): string | null {
+  if (status === "failed")
+    return "Este Pix expirou ou foi cancelado. Volte à campanha para gerar outro.";
+  if (status === "refunded") return "Este pagamento foi reembolsado.";
+  if (status === "chargeback") return "Este pagamento está em contestação.";
+  return null;
 }
 
 function PagamentoPage() {
@@ -65,28 +50,36 @@ function PagamentoPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [paid, setPaid] = useState(false);
+  const [paymentId, setPaymentId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const generate = useCallback(async (data: Donation) => {
+  const loadPayment = useCallback(async () => {
     setLoading(true);
     setError(null);
+    const transactionId = new URLSearchParams(window.location.search).get("transactionId");
+    setPaymentId(transactionId);
+    if (!transactionId) {
+      setError("Não encontramos seu pagamento. Volte à campanha e preencha os dados da doação.");
+      setLoading(false);
+      return;
+    }
     try {
-      const response = await fetch("/api/public/pix/create", {
+      const response = await fetch("/api/public/pix/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: data.amount,
-          payerName: data.nome,
-          description: "Doacao campanha Kaue - Historias Unicas",
-        }),
+        body: JSON.stringify({ transactionId }),
       });
       const body = await response.json();
       if (!response.ok) {
-        setError(body?.error ?? "Não conseguimos gerar seu Pix agora. Tente novamente.");
+        setError(body?.error ?? "Não conseguimos consultar seu Pix agora. Tente novamente.");
         return;
       }
-      setPix(body as CreatePixResponse);
+      const payment = body as PixStatusResponse;
+      setPix(payment);
+      setDonation({ amount: payment.amount });
+      setPaid(payment.paid);
+      setError(paymentError(payment.status));
     } catch {
       setError("Sem conexão com o servidor. Verifique sua internet e tente novamente.");
     } finally {
@@ -95,19 +88,16 @@ function PagamentoPage() {
   }, []);
 
   useEffect(() => {
-    const data = readDonation();
-    setDonation(data);
-    if (!data) {
-      setLoading(false);
-      setError("Não encontramos os dados da sua doação. Volte e escolha o valor novamente.");
-      return;
-    }
-    void generate(data);
-  }, [generate]);
+    void loadPayment();
+  }, [loadPayment]);
 
   useEffect(() => {
-    if (!pix?.transactionId || paid) return;
+    if (!pix?.transactionId || paid || paymentError(pix.status)) return;
+    let checking = false;
+    let cancelled = false;
     const check = async () => {
+      if (checking) return;
+      checking = true;
       try {
         const response = await fetch("/api/public/pix/status", {
           method: "POST",
@@ -115,7 +105,15 @@ function PagamentoPage() {
           body: JSON.stringify({ transactionId: pix.transactionId }),
         });
         if (!response.ok) return;
-        const body = (await response.json()) as { paid?: boolean };
+        const body = (await response.json()) as PixStatusResponse;
+        if (cancelled) return;
+        setPix(body);
+        const failure = paymentError(body.status);
+        if (failure) {
+          setError(failure);
+          if (pollRef.current) clearInterval(pollRef.current);
+          return;
+        }
         if (body.paid) {
           setPaid(true);
           if (pollRef.current) clearInterval(pollRef.current);
@@ -123,13 +121,16 @@ function PagamentoPage() {
         }
       } catch {
         /* tenta de novo no próximo ciclo */
+      } finally {
+        checking = false;
       }
     };
     pollRef.current = setInterval(check, 3000);
     return () => {
+      cancelled = true;
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [pix?.transactionId, paid]);
+  }, [pix?.transactionId, pix?.status, paid]);
 
   const copy = async () => {
     if (!pix?.copyPaste) return;
@@ -174,7 +175,7 @@ function PagamentoPage() {
           <div className="pg-card">
             <div className="pg-center">
               <div className="pg-spinner" />
-              <p>Gerando seu Pix com muito carinho…</p>
+              <p>Carregando seu Pix com muito carinho…</p>
             </div>
           </div>
         )}
@@ -183,8 +184,8 @@ function PagamentoPage() {
           <div className="pg-card">
             <div className="pg-center">
               <div className="pg-error">{error}</div>
-              {donation ? (
-                <button className="pg-btn-outline" onClick={() => void generate(donation)}>
+              {paymentId && (!pix || !paymentError(pix.status)) ? (
+                <button className="pg-btn-outline" onClick={() => void loadPayment()}>
                   Tentar novamente
                 </button>
               ) : (
@@ -199,14 +200,21 @@ function PagamentoPage() {
         {paid && (
           <div className="pg-success">
             <div className="pg-success-check">
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg
+                width="34"
+                height="34"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
             <h2>Pagamento aprovado</h2>
             <p>
-              Recebemos sua doação de {formatBRL(donation?.amount ?? 0)}. Muito obrigado por ajudar o Kauê a
-              respirar com segurança 💙
+              Recebemos sua doação de {formatBRL(donation?.amount ?? 0)}. Muito obrigado por ajudar
+              o Kauê a respirar com segurança 💙
             </p>
             <a className="pg-btn-outline" href="/">
               Voltar para a campanha
@@ -219,7 +227,14 @@ function PagamentoPage() {
             <div className="pg-card">
               <div className="pg-card-head">
                 <div className="pg-card-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <rect x="9" y="9" width="13" height="13" rx="2" />
                     <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
                   </svg>
@@ -231,8 +246,18 @@ function PagamentoPage() {
                   <div className="pg-code-label">Pix copia e cola</div>
                   <div className="pg-code-value">{pix.copyPaste}</div>
                 </div>
-                <button className={`pg-copy-btn${copied ? " copied" : ""}`} onClick={() => void copy()}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <button
+                  className={`pg-copy-btn${copied ? " copied" : ""}`}
+                  onClick={() => void copy()}
+                >
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <rect x="9" y="9" width="13" height="13" rx="2" />
                     <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
                   </svg>
@@ -244,7 +269,14 @@ function PagamentoPage() {
             <div className="pg-card">
               <div className="pg-card-head">
                 <div className="pg-card-icon">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <rect x="2" y="3" width="20" height="14" rx="2" />
                     <path d="M8 21h8M12 17v4" />
                   </svg>
@@ -275,8 +307,8 @@ function PagamentoPage() {
                   <div>
                     <div className="pg-step-label">Passo 3</div>
                     <div className="pg-step-text">
-                      Confira o valor e <strong>confirme o pagamento</strong> — a confirmação aparece aqui
-                      automaticamente
+                      Confira o valor e <strong>confirme o pagamento</strong> — a confirmação
+                      aparece aqui automaticamente
                     </div>
                   </div>
                 </div>
@@ -287,7 +319,14 @@ function PagamentoPage() {
               <div className="pg-card">
                 <div className="pg-card-head">
                   <div className="pg-card-icon gold">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
                       <rect x="3" y="3" width="7" height="7" rx="1" />
                       <rect x="14" y="3" width="7" height="7" rx="1" />
                       <rect x="3" y="14" width="7" height="7" rx="1" />
@@ -297,7 +336,9 @@ function PagamentoPage() {
                   <h2 className="pg-card-title">Ou escaneie o QR Code</h2>
                 </div>
                 <div className="pg-card-body">
-                  <p className="pg-qr-hint">Use a câmera do celular para escanear e pagar diretamente</p>
+                  <p className="pg-qr-hint">
+                    Use a câmera do celular para escanear e pagar diretamente
+                  </p>
                   <div className="pg-qr-frame">
                     <img src={pix.qrcodeUrl} alt="QR Code Pix da doação" />
                   </div>
@@ -322,12 +363,13 @@ function PagamentoPage() {
               </div>
               <div className="pg-secure-timer">⏱ 24h</div>
             </div>
-
           </>
         )}
       </div>
 
-      <div className={`pg-toast${copied ? " show" : ""}`}>Código Pix copiado! Cole no seu banco 💙</div>
+      <div className={`pg-toast${copied ? " show" : ""}`}>
+        Código Pix copiado! Cole no seu banco 💙
+      </div>
     </div>
   );
 }
