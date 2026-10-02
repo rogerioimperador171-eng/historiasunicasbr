@@ -1,4 +1,4 @@
-import { checkPix } from "../../src/lib/propix.server";
+import { checkPix } from "../../src/lib/flevopay.server";
 
 export default async (request: Request) => {
   if (request.method === "OPTIONS") {
@@ -8,18 +8,20 @@ export default async (request: Request) => {
     return Response.json({ error: "Método não permitido." }, { status: 405 });
   }
 
-  let payload: any = {};
+  let payload: unknown;
   try {
     payload = await request.json();
   } catch {
-    payload = {};
+    return Response.json({ error: "JSON inválido." }, { status: 400 });
   }
 
   try {
     const result = await checkPix(payload, process.env as Record<string, string | undefined>);
-    return Response.json(result.body, { status: result.status });
-  } catch (error) {
-    console.error("pix-status", error);
+    return Response.json(result.body, {
+      status: result.status,
+      headers: { "Cache-Control": "no-store" },
+    });
+  } catch {
     return Response.json({ error: "Falha ao consultar o pagamento." }, { status: 500 });
   }
 };
