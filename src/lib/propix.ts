@@ -2,8 +2,6 @@
  * Contrato compartilhado entre o frontend, as Netlify Functions e as rotas
  * de servidor. Não contém credenciais.
  */
-export const PROPIX_BASE_URL = "https://api.propixbr.com";
-
 export type CreatePixResponse = {
   transactionId: string;
   copyPaste: string;
