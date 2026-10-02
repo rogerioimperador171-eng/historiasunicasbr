@@ -1,114 +1,165 @@
-import { PROPIX_BASE_URL, normalizeAmount } from "./propix";
+import { randomUUID } from "node:crypto";
+import { normalizeAmount } from "./propix";
 
-type Credentials = { clientId: string; clientSecret: string };
+type Environment = Record<string, string | undefined>;
+type PixInput = {
+  amount?: unknown;
+  payerName?: unknown;
+  description?: unknown;
+  payerDocument?: unknown;
+  payerEmail?: unknown;
+  payerPhone?: unknown;
+};
 
-function getCredentials(env: Record<string, string | undefined>): Credentials {
-  const clientId = env["PROPAY_CLIENT_ID"];
-  const clientSecret = env["PROPAY_CLIENT_SECRET"];
-  if (!clientId || !clientSecret) {
-    throw new Error("Credenciais do Pix não configuradas (PROPAY_CLIENT_ID / PROPAY_CLIENT_SECRET).");
+function getApiKey(env: Environment): string {
+  const apiKey = env["FLEVOPAY_API_KEY"]?.trim();
+  if (!apiKey) {
+    throw new Error("Credencial do Pix não configurada (FLEVOPAY_API_KEY).");
   }
-  return { clientId, clientSecret };
+  return apiKey;
 }
 
-async function callPropix(
+function readString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+async function callFlevoPay(
   path: string,
-  payload: unknown,
-  env: Record<string, string | undefined>,
-): Promise<{ ok: boolean; status: number; data: any }> {
-  const { clientId, clientSecret } = getCredentials(env);
+  env: Environment,
+  payload?: unknown,
+): Promise<{ ok: boolean; status: number; data: Record<string, unknown> }> {
+  const apiKey = getApiKey(env);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20000);
   try {
-    const response = await fetch(`${PROPIX_BASE_URL}${path}`, {
-      method: "POST",
+    const response = await fetch(`https://app.flevopay.com.br${path}`, {
+      method: payload === undefined ? "GET" : "POST",
       headers: {
-        "x-client-id": clientId,
-        "x-client-secret": clientSecret,
+        "X-API-Key": apiKey,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(payload),
+      ...(payload === undefined ? {} : { body: JSON.stringify(payload) }),
       signal: controller.signal,
+      redirect: "error",
     });
-    const text = await response.text();
-    let data: any = null;
+    let data: Record<string, unknown> = {};
     try {
-      data = text ? JSON.parse(text) : null;
+      const parsed: unknown = await response.json();
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        data = parsed as Record<string, unknown>;
+      }
     } catch {
-      data = { message: text };
+      data = {};
     }
     return { ok: response.ok, status: response.status, data };
+  } catch {
+    throw new Error("Falha de comunicação com o provedor Pix.");
   } finally {
     clearTimeout(timeout);
   }
 }
 
-export async function createPix(
-  input: { amount: unknown; payerName?: unknown; description?: unknown; payerDocument?: unknown },
-  env: Record<string, string | undefined>,
-) {
-  const amount = normalizeAmount(input.amount);
+export async function createPix(input: PixInput | null, env: Environment) {
+  const amount = normalizeAmount(input?.amount);
   if (amount === null) {
-    return { status: 400, body: { error: "Valor inválido. O mínimo é R$ 5,00 e o máximo R$ 7.000,00." } };
+    return {
+      status: 400,
+      body: { error: "Valor inválido. O mínimo é R$ 5,00 e o máximo R$ 7.000,00." },
+    };
   }
   const payerName =
-    typeof input.payerName === "string" && input.payerName.trim()
+    typeof input?.payerName === "string" && input.payerName.trim()
       ? input.payerName.trim().slice(0, 80)
       : "Doador Anonimo";
   const description =
-    typeof input.description === "string" && input.description.trim()
+    typeof input?.description === "string" && input.description.trim()
       ? input.description.trim().slice(0, 120)
       : "Doacao Historias Unicas";
 
-  const payload: Record<string, unknown> = { amount, description, payerName };
-  if (typeof input.payerDocument === "string") {
-    const doc = input.payerDocument.replace(/\D/g, "");
-    if (doc.length === 11 || doc.length === 14) payload["payerDocument"] = doc;
+  const document = (
+    readString(input?.payerDocument) || readString(env["FLEVOPAY_DEFAULT_DOCUMENT"])
+  ).replace(/\D/g, "");
+  const email = readString(input?.payerEmail) || readString(env["FLEVOPAY_DEFAULT_EMAIL"]);
+  const phone = (
+    readString(input?.payerPhone) || readString(env["FLEVOPAY_DEFAULT_PHONE"])
+  ).replace(/\D/g, "");
+  if (
+    !/^\d{11}(?:\d{3})?$/.test(document) ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+    !/^\d{10,13}$/.test(phone)
+  ) {
+    return {
+      status: 400,
+      body: { error: "Dados do pagador incompletos ou inválidos para gerar o Pix." },
+    };
   }
 
-  const { ok, status, data } = await callPropix("/api/v1/deposit", payload, env);
-  if (!ok || !data?.copyPaste) {
+  const payload: Record<string, unknown> = {
+    amount: Math.round(amount * 100),
+    description,
+    reference: randomUUID(),
+    source: "api_externa",
+    customer: { name: payerName, email, document, phone },
+  };
+  const postbackUrl = env["FLEVOPAY_POSTBACK_URL"]?.trim();
+  if (postbackUrl) {
+    const url = new URL(postbackUrl);
+    if (url.protocol !== "https:" || url.username || url.password) {
+      throw new Error("FLEVOPAY_POSTBACK_URL deve ser uma URL HTTPS sem credenciais.");
+    }
+    payload["postback_url"] = url.href;
+  }
+
+  const { ok, status, data } = await callFlevoPay("/api/v1/transaction", env, payload);
+  const transactionId =
+    typeof data["transaction_id"] === "number" &&
+    Number.isSafeInteger(data["transaction_id"]) &&
+    data["transaction_id"] > 0
+      ? String(data["transaction_id"])
+      : readString(data["transaction_id"]) || readString(data["id"]);
+  const copyPaste = readString(data["qr_code"]);
+  if (!ok || data["status"] !== "success" || !transactionId || !copyPaste) {
     return {
       status: status >= 400 ? status : 502,
-      body: { error: data?.message || "Não foi possível gerar o Pix agora. Tente novamente." },
+      body: { error: "Não foi possível gerar o Pix agora. Tente novamente." },
     };
   }
 
   return {
     status: 200,
     body: {
-      transactionId: String(data.transactionId),
-      copyPaste: String(data.copyPaste),
-      qrcodeUrl: String(data.qrcodeUrl ?? ""),
+      transactionId,
+      copyPaste,
+      qrcodeUrl: /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(readString(data["qr_code_base64"]))
+        ? readString(data["qr_code_base64"])
+        : "",
       status: "PENDENTE",
     },
   };
 }
 
-export async function checkPix(
-  input: { transactionId: unknown },
-  env: Record<string, string | undefined>,
-) {
-  const transactionId = typeof input.transactionId === "string" ? input.transactionId.trim() : "";
-  if (!transactionId) {
+export async function checkPix(input: { transactionId?: unknown } | null, env: Environment) {
+  const transactionId = readString(input?.transactionId);
+  if (!transactionId || transactionId.length > 200) {
     return { status: 400, body: { error: "transactionId obrigatório." } };
   }
 
-  const { ok, status, data } = await callPropix("/api/v1/check", { transactionId }, env);
-  if (!ok) {
+  const query = new URLSearchParams({ action: "get_transaction", id: transactionId });
+  const { ok, status, data } = await callFlevoPay(`/api/v1/query?${query}`, env);
+  const state = readString(data["status"]).toLowerCase();
+  if (!ok || !state || data["success"] === false) {
     return {
       status: status >= 400 ? status : 502,
-      body: { error: data?.message || "Não foi possível consultar o pagamento." },
+      body: { error: "Não foi possível consultar o pagamento." },
     };
   }
 
-  const state = String(data?.transaction?.transactionState ?? data?.transactionState ?? "PENDENTE");
   return {
     status: 200,
     body: {
       transactionId,
       transactionState: state,
-      paid: state.toUpperCase() === "COMPLETO",
+      paid: state === "approved",
     },
   };
 }

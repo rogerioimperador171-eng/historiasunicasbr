@@ -30,7 +30,7 @@ export const Route = createFileRoute("/pagamento")({
   component: PagamentoPage,
 });
 
-type Donation = { amount: number; nome: string };
+type Donation = { amount: number; nome: string; email: string; telefone: string };
 
 function formatBRL(value: number) {
   return `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -41,22 +41,29 @@ function readDonation(): Donation | null {
   const params = new URLSearchParams(window.location.search);
   let amount = Number(params.get("amount"));
   let nome = params.get("nome") ?? "";
+  let email = "";
+  let telefone = "";
 
-  if (!amount || amount < 5) {
-    try {
-      const stored = window.sessionStorage.getItem("hu_donation");
-      if (stored) {
-        const parsed = JSON.parse(stored) as { amount?: number; nome?: string };
-        if (parsed.amount) amount = Number(parsed.amount);
-        if (!nome && parsed.nome) nome = parsed.nome;
-      }
-    } catch {
-      /* ignora */
+  try {
+    const stored = window.sessionStorage.getItem("hu_donation");
+    if (stored) {
+      const parsed = JSON.parse(stored) as Partial<Donation> | null;
+      if ((!amount || amount < 5) && parsed?.amount) amount = Number(parsed.amount);
+      if (!nome && typeof parsed?.nome === "string") nome = parsed.nome;
+      if (typeof parsed?.email === "string") email = parsed.email.trim();
+      if (typeof parsed?.telefone === "string") telefone = parsed.telefone;
     }
+  } catch {
+    /* ignora */
   }
 
   if (!amount || amount < 5) return null;
-  return { amount: Math.round(amount * 100) / 100, nome: nome.trim() || "Doador Anonimo" };
+  return {
+    amount: Math.round(amount * 100) / 100,
+    nome: nome.trim() || "Doador Anonimo",
+    email,
+    telefone,
+  };
 }
 
 function PagamentoPage() {
@@ -78,6 +85,8 @@ function PagamentoPage() {
         body: JSON.stringify({
           amount: data.amount,
           payerName: data.nome,
+          payerEmail: data.email,
+          payerPhone: data.telefone,
           description: "Doacao campanha Kaue - Historias Unicas",
         }),
       });
