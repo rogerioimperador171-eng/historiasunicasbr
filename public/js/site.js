@@ -221,7 +221,7 @@ function goStep1() { showStep('step1'); document.getElementById('modalTabs').sty
 function goStep2() {
   var custom = parseAmount(document.getElementById('customAmt').value);
   var amt = custom > 0 ? custom : selectedAmount;
-  if (!amt || amt < 5) { alert('O valor mínimo da doação é R$ 5,00.'); return; }
+  if (!amt || amt < 10) { alert('O valor mínimo da doação é R$ 10,00.'); return; }
   if (amt > 7000) { alert('Valor máximo: R$ 7.000'); return; }
   selectedAmount = amt;
   document.getElementById('modalTabs').style.display = 'none';
@@ -263,15 +263,15 @@ function toggleTurbine(e) {
 }
 function submitDonation() {
   var amt = selectedAmount;
-  if (!amt || amt < 5) { alert('O valor mínimo da doação é R$ 5,00.'); return; }
+  if (!amt || amt < 10) { alert('O valor mínimo da doação é R$ 10,00.'); return; }
   var nome = document.getElementById('nameUnica').value.trim();
   var tel = document.getElementById('phoneUnica').value.replace(/\D/g, '');
   var email = document.getElementById('emailUnica').value.trim();
+  var cpf = document.getElementById('cpfUnica').value.replace(/\D/g, '');
   if (!nome) { alert('Preencha seu nome ou marque "Anônimo".'); return; }
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    alert('Digite um e-mail válido ou deixe o campo em branco.');
-    return;
-  }
+  if (tel.length < 10) { alert('Digite seu WhatsApp com DDD.'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { alert('Digite um e-mail válido.'); return; }
+  if (cpf.length !== 11 && cpf.length !== 14) { alert('Digite um CPF ou CNPJ válido.'); return; }
   amt += document.getElementById('turbineCheck').checked ? 4.99 : 0;
   amt = Math.round(amt * 100) / 100;
 
@@ -280,7 +280,7 @@ function submitDonation() {
 
   try {
     sessionStorage.setItem('hu_donation', JSON.stringify({
-      amount: amt, nome: nome, telefone: tel, email: email, ts: Date.now()
+      amount: amt, nome: nome, telefone: tel, email: email, documento: cpf, ts: Date.now()
     }));
   } catch (e) {}
 
@@ -298,6 +298,7 @@ function resetModal() {
   document.getElementById('nameUnica').value = ''; document.getElementById('nameUnica').disabled = false;
   document.getElementById('phoneUnica').value = '';
   document.getElementById('emailUnica').value = '';
+  document.getElementById('cpfUnica').value = '';
   document.getElementById('anonCheck').checked = false;
   document.getElementById('turbineCheck').checked = false;
   document.getElementById('turbineCard').classList.remove('checked');
@@ -315,3 +316,12 @@ function phoneMask(el) {
   });
 }
 phoneMask(document.getElementById('phoneUnica'));
+(function(el) {
+  if (!el) return;
+  el.addEventListener('input', function() {
+    var v = this.value.replace(/\D/g,'').slice(0,14);
+    if (v.length <= 11) v = v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');
+    else v = v.replace(/^(\d{2})(\d)/,'$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/,'$1.$2.$3').replace(/\.(\d{3})(\d)/,'.$1/$2').replace(/(\d{4})(\d)/,'$1-$2');
+    this.value = v;
+  });
+})(document.getElementById('cpfUnica'));

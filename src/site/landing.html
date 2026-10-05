@@ -293,7 +293,7 @@
     </div>
     <div>
       <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this)">A doação é 100% segura?<svg class="faq-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"></path></svg></button><div class="faq-answer">Sim! Todas as doações são processadas com criptografia e passam pela verificação da plataforma Histórias Únicas antes de serem repassadas ao beneficiário.</div></div>
-      <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this)">Existe valor mínimo para doar?<svg class="faq-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"></path></svg></button><div class="faq-answer">Não! Qualquer valor é bem-vindo. Até R$ 5 ajuda — se cada pessoa der um pouco, grandes conquistas acontecem juntos.</div></div>
+      <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this)">Existe valor mínimo para doar?<svg class="faq-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"></path></svg></button><div class="faq-answer">Não! Qualquer valor é bem-vindo. Até R$ 10 ajuda — se cada pessoa der um pouco, grandes conquistas acontecem juntos.</div></div>
       <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this)">Como saberei que o dinheiro foi usado corretamente?<svg class="faq-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"></path></svg></button><div class="faq-answer">A Priscila publicará atualizações com comprovantes de compra do equipamento e adaptação da casa. Você também pode acompanhar em tempo real aqui na página.</div></div>
       <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this)">Posso cancelar minha doação?<svg class="faq-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"></path></svg></button><div class="faq-answer">Doações via Pix são instantâneas e não podem ser revertidas automaticamente. Em caso de dúvidas, entre em contato com nossa equipe pelo suporte.</div></div>
     </div>
@@ -478,10 +478,10 @@
           <button class="val-btn" onclick="selectVal(500,this)">R$ 500</button>
           <button class="val-btn" onclick="selectVal(1000,this)">R$ 1.000</button>
         </div>
-        <div class="custom-label">Ou digite quanto quer doar (mínimo R$ 5,00) ❤️:</div>
+        <div class="custom-label">Ou digite quanto quer doar (mínimo R$ 10,00) ❤️:</div>
         <div class="custom-input-wrap">
           <span class="currency-tag">R$</span>
-          <input type="text" id="customAmt" inputmode="decimal" autocomplete="off" placeholder="Mínimo R$ 5,00" oninput="amountMask(this)">
+          <input type="text" id="customAmt" inputmode="decimal" autocomplete="off" placeholder="Mínimo R$ 10,00" oninput="amountMask(this)">
         </div>
       </div>
       <div class="modal-footer">
@@ -502,8 +502,9 @@
           <input type="text" class="form-input" id="nameUnica" placeholder="Seu nome completo">
           <div class="anon-row"><input type="checkbox" id="anonCheck" onchange="toggleAnon()"><span onclick="document.getElementById('anonCheck').click()">Quero doar anonimamente</span></div>
         </div>
-        <div class="form-group"><label>WhatsApp (opcional)</label><input type="tel" class="form-input" id="phoneUnica" placeholder="(00) 00000-0000" maxlength="15"></div>
-        <div class="form-group"><label>E-mail (opcional)</label><input type="email" class="form-input" id="emailUnica" placeholder="seu@email.com" autocomplete="email"></div>
+        <div class="form-group"><label>WhatsApp</label><input type="tel" class="form-input" id="phoneUnica" placeholder="(00) 00000-0000" maxlength="15"></div>
+        <div class="form-group"><label>CPF</label><input type="text" class="form-input" id="cpfUnica" placeholder="000.000.000-00" inputmode="numeric" maxlength="18" autocomplete="off"></div>
+        <div class="form-group"><label>E-mail</label><input type="email" class="form-input" id="emailUnica" placeholder="seu@email.com" autocomplete="email"></div>
         <div class="turbine-card" id="turbineCard" onclick="toggleTurbine(event)">
           <input type="checkbox" id="turbineCheck">
           <div class="turbine-text"><strong><svg width="12" height="12" viewBox="0 0 24 24" fill="var(--gold)"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>Turbinar minha doação</strong><p>Adicionar R$ 4,99 para cobrir taxas e garantir que 100% chegue ao beneficiário.</p></div>
