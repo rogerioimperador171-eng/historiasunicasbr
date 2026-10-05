@@ -1,7 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { CreatePixResponse } from "@/lib/propix";
+import QRCode from "qrcode";
+
+type CreatePixResponse = {
+  transactionId: string;
+  copyPaste: string;
+  qrCodeBase64: string | null;
+  amount: number;
+  status: string;
+};
 
 const title = "Finalize sua doação via Pix | Histórias Únicas";
 const description =
@@ -30,7 +38,7 @@ export const Route = createFileRoute("/pagamento")({
   component: PagamentoPage,
 });
 
-type Donation = { amount: number; nome: string };
+type Donation = { amount: number; nome: string; email: string; telefone: string; documento: string };
 
 function formatBRL(value: number) {
   return `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -41,22 +49,25 @@ function readDonation(): Donation | null {
   const params = new URLSearchParams(window.location.search);
   let amount = Number(params.get("amount"));
   let nome = params.get("nome") ?? "";
-
-  if (!amount || amount < 5) {
-    try {
-      const stored = window.sessionStorage.getItem("hu_donation");
-      if (stored) {
-        const parsed = JSON.parse(stored) as { amount?: number; nome?: string };
-        if (parsed.amount) amount = Number(parsed.amount);
-        if (!nome && parsed.nome) nome = parsed.nome;
-      }
-    } catch {
-      /* ignora */
+  let email = "";
+  let telefone = "";
+  let documento = "";
+  try {
+    const stored = window.sessionStorage.getItem("hu_donation");
+    if (stored) {
+      const parsed = JSON.parse(stored) as Partial<Donation>;
+      if (parsed.amount) amount = Number(parsed.amount);
+      if (parsed.nome) nome = parsed.nome;
+      email = parsed.email ?? "";
+      telefone = parsed.telefone ?? "";
+      documento = parsed.documento ?? "";
     }
+  } catch {
+    /* ignora */
   }
 
-  if (!amount || amount < 5) return null;
-  return { amount: Math.round(amount * 100) / 100, nome: nome.trim() || "Doador Anonimo" };
+  if (!amount || amount < 10 || !email || !telefone || !documento) return null;
+  return { amount: Math.round(amount * 100) / 100, nome: nome.trim() || "Doador Anonimo", email, telefone, documento };
 }
 
 function PagamentoPage() {
@@ -64,11 +75,14 @@ function PagamentoPage() {
   const [pix, setPix] = useState<CreatePixResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [paid, setPaid] = useState(false);
+  const paid = false;
   const [copied, setCopied] = useState(false);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [qrSrc, setQrSrc] = useState<string | null>(null);
+  const busyRef = useRef(false);
 
   const generate = useCallback(async (data: Donation) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -77,8 +91,10 @@ function PagamentoPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: data.amount,
-          payerName: data.nome,
-          description: "Doacao campanha Kaue - Historias Unicas",
+          name: data.nome,
+          email: data.email,
+          phone: data.telefone,
+          document: data.documento,
         }),
       });
       const body = await response.json();
@@ -86,10 +102,17 @@ function PagamentoPage() {
         setError(body?.error ?? "Não conseguimos gerar seu Pix agora. Tente novamente.");
         return;
       }
-      setPix(body as CreatePixResponse);
+      const result = body as CreatePixResponse;
+      if (!result?.copyPaste) {
+        setError("Não recebemos o código Pix. Tente novamente.");
+        return;
+      }
+      setPix(result);
+      setDonation({ ...data, amount: result.amount || data.amount });
     } catch {
       setError("Sem conexão com o servidor. Verifique sua internet e tente novamente.");
     } finally {
+      busyRef.current = false;
       setLoading(false);
     }
   }, []);
@@ -99,37 +122,24 @@ function PagamentoPage() {
     setDonation(data);
     if (!data) {
       setLoading(false);
-      setError("Não encontramos os dados da sua doação. Volte e escolha o valor novamente.");
+      setError("Não encontramos os dados da sua doação (valor mínimo R$ 10,00, nome, WhatsApp, e-mail e CPF). Volte e preencha novamente.");
       return;
     }
     void generate(data);
   }, [generate]);
 
+  // A FlevoPay não oferece consulta de status: o Pix criado fica como pendente
+  // e nunca é marcado como pago só por ter sido gerado.
   useEffect(() => {
-    if (!pix?.transactionId || paid) return;
-    const check = async () => {
-      try {
-        const response = await fetch("/api/public/pix/status", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ transactionId: pix.transactionId }),
-        });
-        if (!response.ok) return;
-        const body = (await response.json()) as { paid?: boolean };
-        if (body.paid) {
-          setPaid(true);
-          if (pollRef.current) clearInterval(pollRef.current);
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }
-      } catch {
-        /* tenta de novo no próximo ciclo */
-      }
-    };
-    pollRef.current = setInterval(check, 3000);
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, [pix?.transactionId, paid]);
+    if (!pix) return;
+    if (pix.qrCodeBase64) {
+      setQrSrc(pix.qrCodeBase64.startsWith("data:") ? pix.qrCodeBase64 : `data:image/png;base64,${pix.qrCodeBase64}`);
+      return;
+    }
+    QRCode.toDataURL(pix.copyPaste, { width: 320, margin: 1 })
+      .then(setQrSrc)
+      .catch(() => setQrSrc(null));
+  }, [pix]);
 
   const copy = async () => {
     if (!pix?.copyPaste) return;
@@ -275,15 +285,14 @@ function PagamentoPage() {
                   <div>
                     <div className="pg-step-label">Passo 3</div>
                     <div className="pg-step-text">
-                      Confira o valor e <strong>confirme o pagamento</strong> — a confirmação aparece aqui
-                      automaticamente
+                      Confira o valor e <strong>confirme o pagamento</strong>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {pix.qrcodeUrl && (
+            {qrSrc && (
               <div className="pg-card">
                 <div className="pg-card-head">
                   <div className="pg-card-icon gold">
@@ -299,7 +308,7 @@ function PagamentoPage() {
                 <div className="pg-card-body">
                   <p className="pg-qr-hint">Use a câmera do celular para escanear e pagar diretamente</p>
                   <div className="pg-qr-frame">
-                    <img src={pix.qrcodeUrl} alt="QR Code Pix da doação" />
+                    <img src={qrSrc} alt="QR Code Pix da doação" />
                   </div>
                 </div>
               </div>
@@ -307,7 +316,7 @@ function PagamentoPage() {
 
             <div className="pg-status">
               <span className="pg-status-dot" />
-              Aguardando pagamento… a confirmação é automática
+              Aguardando pagamento…
             </div>
 
             <div className="pg-secure">
