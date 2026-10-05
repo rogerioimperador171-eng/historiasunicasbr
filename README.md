@@ -88,3 +88,12 @@ curl -X POST http://localhost:8080/api/public/pix/status \
 - URL base: `PROPIX_BASE_URL` em `src/lib/propix.ts`.
 - Payload, headers e leitura da resposta: `src/lib/propix.server.ts`
   (usado tanto pelas Netlify Functions quanto pelas rotas de servidor).
+
+## FlevoPay (gateway Pix atual)
+
+- Backend: `src/lib/flevopay.server.ts` (`POST https://app.flevopay.com.br/api/v1/transaction`, header `X-API-Key`).
+- Netlify Function: `netlify/functions/pix-create.mts` (rota `/api/public/pix/create`).
+- Variável obrigatória na Netlify: `FLEVOPAY_API_KEY` (nunca vai para o navegador).
+- Valor mínimo R$ 10,00, enviado em centavos inteiros (R$ 25,50 → 2550), validado no servidor.
+- Dados do cliente: nome, e-mail, CPF/CNPJ e WhatsApp (todos obrigatórios no formulário).
+- A FlevoPay não oferece consulta de status: o Pix gerado fica como "Aguardando pagamento" e nunca é marcado como pago automaticamente.
